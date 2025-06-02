@@ -1,3 +1,4 @@
+# main.tf (terraform file, NOT Jenkinsfile)
 data "aws_iam_policy_document" "assume_role" {
   statement {
     effect = "Allow"
@@ -21,20 +22,10 @@ resource "aws_iam_role_policy_attachment" "example-AmazonEKSClusterPolicy" {
   role       = aws_iam_role.example.name
 }
 
-# Get default VPC
 data "aws_vpc" "default" {
   default = true
 }
 
-# Get all public subnets in the VPC
-data "aws_subnets" "public" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
-}
-
-# Filter subnets excluding unsupported AZ us-east-1e
 data "aws_subnet_ids" "eks_subnets" {
   vpc_id = data.aws_vpc.default.id
 
@@ -50,7 +41,6 @@ data "aws_subnet_ids" "eks_subnets" {
   }
 }
 
-# EKS cluster resource using filtered subnet IDs
 resource "aws_eks_cluster" "example" {
   name     = "EKS_CLOUD"
   role_arn = aws_iam_role.example.arn
@@ -68,14 +58,14 @@ resource "aws_iam_role" "example1" {
   name = "eks-node-group-cloud"
 
   assume_role_policy = jsonencode({
+    Version = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
       Effect = "Allow"
+      Action = "sts:AssumeRole"
       Principal = {
         Service = "ec2.amazonaws.com"
       }
     }]
-    Version = "2012-10-17"
   })
 }
 
@@ -105,6 +95,7 @@ resource "aws_eks_node_group" "example" {
     max_size     = 2
     min_size     = 1
   }
+
   instance_types = ["t2.medium"]
 
   depends_on = [
